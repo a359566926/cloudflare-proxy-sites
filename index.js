@@ -1,6 +1,13 @@
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request));
 });
+
+const proxiedDomains = [
+  "www.v2ex.com",
+  "cdn.v2ex.com",
+  "imgur.com",
+  "i.imgur.com",
+];
  
 const getTargetDomain = (host, rootDomain) => {
   return host.split(`.${rootDomain}`)[0]; 
@@ -46,7 +53,8 @@ Disallow: /
     let text = new TextDecoder('utf-8').decode(body);
 
     // Replace all instances of the proxy site domain with the current host domain in the text
-    text = text.replace(new RegExp( `(//|https?://)${targetDomain}`, 'g'), `$1${host}` );
+    // text = text.replace(new RegExp( `(//|https?://)${targetDomain}`, 'g'), `$1${host}` );
+    text = text.replace(new RegExp( `(//|https?://)(${proxiedDomains.join('|')})`, 'g'), `$1$2.${ownDomain}` );
     body = new TextEncoder().encode(text).buffer;
   }
 
