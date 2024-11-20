@@ -16,6 +16,11 @@ const getTargetDomain = (host, rootDomain) => {
 const ownDomain = "serp.ing";
 
 async function handleRequest(request) {
+  const authResponse = checkAuth(request);
+  if (authResponse) {
+    return authResponse;
+  }
+
   const url = new URL(request.url);
   const { host, pathname } = url;
 
@@ -62,4 +67,34 @@ Disallow: /
   modifiedResponse.headers.set('Access-Control-Allow-Origin', '*');
   return modifiedResponse; 
  
+}
+
+function checkAuth(request) {
+  const validPasswords = ["lzm", "why"];
+  const authHeader = request.headers.get("Authorization");
+
+  // 检查 Authorization 是否存在
+  if (!authHeader || !authHeader.startsWith("Basic ")) {
+    return unauthorizedResponse();
+  }
+
+  // 提取 Base64 编码的用户名（无密码）
+  const credentials = atob(authHeader.split(" ")[1]);
+  const [username] = credentials.split(":");
+
+  // 验证用户名是否正确
+  if (!validPasswords.includes(username)) {
+    return unauthorizedResponse();
+  }
+
+  return null;
+}
+
+function unauthorizedResponse() {
+  return new Response("Unauthorized", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Restricted Area"',
+    },
+  });
 }
