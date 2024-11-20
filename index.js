@@ -71,15 +71,23 @@ Disallow: /
 const AUTH_COOKIE_NAME = "CPS_AUTH_TOKEN"; // Cookie 名称
 
 function checkAuth(request) {
+  if (new URL(request.url).host == `auth.${ownDomain}`) {
+    // 主动重置验证信息
+    console.log(`visiting: auth.${ownDomain}`);
+    return unauthorizedResponse();
+  }
   const validPasswords = ["lzm", "why"];
   const cookies = parseCookies(request.headers.get("Cookie"));
   const password = cookies[AUTH_COOKIE_NAME];
 
   // 验证用户名是否正确
   if (!validPasswords.includes(password)) {
+    // 如果没有有效验证信息，返回登录页面
+    console.log("unauthorized");
     return unauthorizedResponse();
   }
 
+  console.log("auth by: " + password);
   return null;
 }
 
@@ -89,13 +97,13 @@ function loginPage() {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Set Cookie Example</title>
+      <title>Login</title>
       <script>
         function setCookie() {
           // 获取用户输入
           const userInput = document.getElementById("password").value;
-          // 设置 Cookie
-          document.cookie = \`${AUTH_COOKIE_NAME}=\${encodeURIComponent(userInput)}\`;
+          // 设置 Cookie（https://3wapp.github.io/HTTP/cookie.html）
+          document.cookie = \`${AUTH_COOKIE_NAME}=\${encodeURIComponent(userInput)}; domain=${ownDomain}; path=/\`;
           // 刷新页面
           window.location.reload();
         }
@@ -114,7 +122,6 @@ function loginPage() {
 }
 
 function unauthorizedResponse() {
-  // 如果没有有效 Cookie，返回登录页面
   return new Response(loginPage(), {
     status: 200,
     headers: {
