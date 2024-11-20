@@ -66,35 +66,72 @@ Disallow: /
   const modifiedResponse = new Response(body, response);
   modifiedResponse.headers.set('Access-Control-Allow-Origin', '*');
   return modifiedResponse; 
- 
 }
+
+const AUTH_COOKIE_NAME = "CPS_AUTH_TOKEN"; // Cookie 名称
 
 function checkAuth(request) {
   const validPasswords = ["lzm", "why"];
-  const authHeader = request.headers.get("Authorization");
-
-  // 检查 Authorization 是否存在
-  if (!authHeader || !authHeader.startsWith("Basic ")) {
-    return unauthorizedResponse();
-  }
-
-  // 提取 Base64 编码的用户名（无密码）
-  const credentials = atob(authHeader.split(" ")[1]);
-  const [username] = credentials.split(":");
+  const cookies = parseCookies(request.headers.get("Cookie"));
+  const password = cookies[AUTH_COOKIE_NAME];
 
   // 验证用户名是否正确
-  if (!validPasswords.includes(username)) {
+  if (!validPasswords.includes(password)) {
     return unauthorizedResponse();
   }
 
   return null;
 }
 
+// 登录页面 HTML
+function loginPage() {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Set Cookie Example</title>
+      <script>
+        function setCookie() {
+          // 获取用户输入
+          const userInput = document.getElementById("password").value;
+          // 设置 Cookie
+          document.cookie = \`${AUTH_COOKIE_NAME}=\${encodeURIComponent(userInput)}\`;
+          // 刷新页面
+          window.location.reload();
+        }
+      </script>
+    </head>
+    <body>
+      <h1>Restricted Access</h1>
+      <form onsubmit="handleLogin(event)">
+        <label for="password">Enter Password:</label>
+        <input type="password" id="password" required>
+        <button onclick="setCookie()">Submit</button>
+      </form>
+    </body>
+    </html>
+  `;
+}
+
 function unauthorizedResponse() {
-  return new Response("Unauthorized", {
-    status: 401,
+  // 如果没有有效 Cookie，返回登录页面
+  return new Response(loginPage(), {
+    status: 200,
     headers: {
-      "WWW-Authenticate": 'Basic realm="Restricted Area"',
+      "Content-Type": "text/html; charset=utf-8",
     },
   });
+}
+
+// 解析 Cookie
+function parseCookies(cookieHeader) {
+  const cookies = {};
+  if (!cookieHeader) return cookies;
+
+  cookieHeader.split(";").forEach(cookie => {
+    const [name, ...value] = cookie.split("=");
+    cookies[name.trim()] = value.join("=").trim();
+  });
+
+  return cookies;
 }
